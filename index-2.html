@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#1b1530">
+<title>퀵드로우 결투</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700&family=Rye&display=swap">
+<style>
+/* 해질녘 사막 한 장면: 화면 가운데 큰 신호 글자 하나가 전부. 다크 단일 테마 */
+:root{
+  --sky:#1b1530; --dust:#2a2142; --sun:#f2a541; --blood:#e5484d;
+  --bone:#efe6d8; --muted:#a49bb8; --line:#3d3360; --ok:#58c48a;
+  --f-west:"Rye",Georgia,serif;
+  --f-cue:"Black Han Sans","Noto Sans KR",system-ui,sans-serif;
+  --f-body:"Noto Sans KR",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{
+  background:radial-gradient(120% 60% at 50% 105%,#5a2d3a 0%,var(--sky) 60%) fixed,var(--sky);
+  color:var(--bone);font:15px/1.5 var(--f-body);
+  padding:env(safe-area-inset-top,0) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0) max(16px,env(safe-area-inset-left,0px));
+  overscroll-behavior:none;user-select:none;-webkit-user-select:none;transition:background-color .05s;
+}
+body.fire{background:var(--blood)}
+body.foul{background:#3a1420}
+[hidden]{display:none!important}
+.wrap{max-width:440px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;gap:18px;padding-block:20px}
+h1{font:400 clamp(40px,13vw,58px)/1 var(--f-west);margin:18px 0 0;color:var(--sun);letter-spacing:.02em;text-align:center}
+.tag{text-align:center;color:var(--muted);margin:0}
+label{font-size:12px;letter-spacing:.08em;color:var(--muted)}
+input{width:100%;font:inherit;font-size:17px;color:var(--bone);background:var(--dust);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+input:focus{outline:2px solid var(--sun);outline-offset:1px}
+.btn{display:block;width:100%;font:700 17px/1 var(--f-body);padding:17px;border-radius:12px;border:0;cursor:pointer;color:var(--sky);background:var(--sun)}
+.btn.ghost{background:transparent;color:var(--bone);border:1px solid var(--line)}
+.btn:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+.btn:active{transform:translateY(1px)}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.field{display:flex;flex-direction:column;gap:6px}
+.how{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin:0;display:grid;gap:4px}
+.how b{color:var(--bone)}
+.code{font:400 64px/1 var(--f-cue);letter-spacing:.15em;text-align:center;color:var(--sun);margin:6px 0}
+.msg{text-align:center;color:var(--muted);min-height:1.5em}
+.err{color:var(--blood)}
+
+/* 게임 화면 */
+#game{justify-content:space-between}
+.hud{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.who{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.who.r{align-items:flex-end;text-align:right}
+.nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.holster{font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.holster.on{border-color:var(--ok);color:var(--ok)}
+.score{font:400 40px/1 var(--f-cue);font-variant-numeric:tabular-nums;color:var(--sun);white-space:nowrap}
+.score small{font-size:16px;color:var(--muted);margin:0 6px}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;min-height:46vh}
+#cue{font:400 clamp(64px,26vw,130px)/1 var(--f-cue);margin:0;text-wrap:balance}
+#sub{font-size:17px;color:var(--bone);margin:0;max-width:30ch}
+#detail{font-size:14px;color:var(--muted);margin:0;font-variant-numeric:tabular-nums}
+body.fire #cue,body.fire #sub{color:#fff}
+.phone{width:44px;height:74px;border:3px solid var(--muted);border-radius:10px;position:relative;transition:transform .4s}
+.phone::after{content:"";position:absolute;left:50%;top:6px;width:12px;height:3px;margin-left:-6px;background:var(--muted);border-radius:2px}
+.phone.down{transform:rotate(180deg)}
+.pad{border:2px dashed var(--line);border-radius:16px;padding:22px;text-align:center;color:var(--muted);touch-action:none}
+.pad.on{border-color:var(--ok);color:var(--ok);background:rgba(88,196,138,.08)}
+.stake{display:flex;gap:8px;align-items:center}
+.stake label{white-space:nowrap}
+.stake input{padding:9px 12px;font-size:15px}
+.foot{display:flex;gap:10px}
+.foot .btn{padding:13px;font-size:15px}
+@media (prefers-reduced-motion:reduce){.phone{transition:none}}
+</style>
+</head>
+<body>
+
+<!-- 로비 -->
+<main class="wrap" id="lobby">
+  <div>
+    <h1>Quick Draw</h1>
+    <p class="tag">신호가 뜨면 먼저 뽑는 사람이 이긴다</p>
+  </div>
+  <div class="field">
+    <label for="name">내 이름</label>
+    <input id="name" maxlength="10" placeholder="예: 남편">
+  </div>
+  <button class="btn" id="bHost">방 만들기</button>
+  <div class="row">
+    <input id="joinCode" inputmode="numeric" maxlength="4" placeholder="방 번호 4자리" aria-label="방 번호">
+    <button class="btn ghost" id="bJoin">입장</button>
+  </div>
+  <button class="btn ghost" id="bSolo">혼자 연습</button>
+  <p class="msg" id="lobbyMsg"></p>
+  <div class="how">
+    <span><b>1.</b> 휴대폰을 거꾸로 들어 아래로 내리면 총을 집어넣은 상태예요.</span>
+    <span><b>2.</b> 둘 다 내리면 "기다려…" 뒤에 영어로 외칩니다. <b>FIRE!</b> 일 때만 들어 올려 쏘세요.</span>
+    <span><b>3.</b> FIVE, FIGHT, HIRE 같은 가짜 신호에 쏘거나 미리 들면 그 판은 패배.</span>
+    <span><b>4.</b> 3판 먼저 이기면 승리. 내기는 게임 화면에서 적어요.</span>
+  </div>
+</main>
+
+<!-- 대기실 -->
+<main class="wrap" id="room" hidden>
+  <h1>Quick Draw</h1>
+  <p class="msg">상대에게 이 번호를 알려주세요</p>
+  <div class="code" id="roomCode">----</div>
+  <p class="msg" id="roomMsg">서버 연결 중…</p>
+  <button class="btn ghost" id="bCancel">취소</button>
+</main>
+
+<!-- 게임 -->
+<main class="wrap" id="game" hidden>
+  <div class="hud">
+    <div class="who"><span class="nm" id="meName">나</span><span class="holster" id="meH">총 꺼냄</span></div>
+    <div class="score" id="score">0<small>:</small>0</div>
+    <div class="who r" id="oppBox"><span class="nm" id="oppName">상대</span><span class="holster" id="oppH">총 꺼냄</span></div>
+  </div>
+
+  <section class="stage" aria-live="polite">
+    <div class="phone" id="phoneIcon"></div>
+    <p id="cue">준비</p>
+    <p id="sub"></p>
+    <p id="detail"></p>
+  </section>
+
+  <div class="pad" id="pad" hidden>기울기 센서를 쓸 수 없어요.<br><b>여기를 누르고 있기 = 총 넣기</b>, 손 떼기 = 발사</div>
+
+  <div class="stake" id="stakeRow">
+    <label for="stake">내기</label>
+    <input id="stake" maxlength="30" placeholder="예: 진 사람이 설거지">
+  </div>
+  <div class="foot">
+    <button class="btn ghost" id="bQuit">나가기</button>
+    <button class="btn" id="bAgain" hidden>다시 한 판</button>
+  </div>
+</main>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const WIN = 3;                 // 선승 판수
+const PREFIX = "kwqd-duel-";   // PeerJS 방 아이디 접두어
+
+// ---------- 저장(편의용) ----------
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : v; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+};
+
+// ---------- 상태 ----------
+const S = {
+  mode:null,              // 'solo' | 'host' | 'guest'
+  phase:'lobby',          // ready | wait | fire | after | result | match
+  holster:false, oppHolster:false,
+  round:0, score:[0,0], res:{me:null, opp:null}, pend:{},
+  name:'', oppName:'상대', stake:'',
+  t0:0, best:+store.get('qd-best', 0) || 0
+};
+let peer = null, conn = null;
+let fireTimer = 0, missTimer = 0, readyTimer = 0, nextTimer = 0, beatTimer = 0, fakeTimers = [];
+
+// ---------- 소리 ----------
+let ac = null;
+function audioInit(){ try{ ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); }catch(e){} }
+function tone(freq, dur, type='sine', vol=.25){
+  if(!ac) return;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + dur);
+  o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + dur);
+}
+function bang(){
+  if(!ac) return;
+  const n = ac.sampleRate * .35, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/n, 3);
+  const s = ac.createBufferSource(), g = ac.createGain(); g.gain.value = .9;
+  s.buffer = buf; s.connect(g).connect(ac.destination); s.start();
+}
+// 영어 음성 (신호와 페이크를 소리로도 외침)
+function say(w, vol=1){
+  try{
+    const u = new SpeechSynthesisUtterance(w);
+    u.lang = 'en-US'; u.rate = 1.15; u.volume = vol;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }catch(e){}
+}
+// 페이크 단어: FIRE와 헷갈리는 말들
+const FAKES = ['FIVE','FINE','FIGHT','FIRST','FIRM','FIBER','FIZZ','HIRE','TIRE','WIRE','FILE','FIRMLY'];
+
+// ---------- 센서 ----------
+// beta: 세워 들면 +90, 눕히면 0, 위쪽이 땅을 향하면 -90 근처
+let sensor = 'none';
+function onOri(e){
+  if(e.beta == null) return;
+  if(sensor !== 'tilt'){ sensor = 'tilt'; render(); }
+  const b = e.beta;
+  if(b < -45) setDown(true);       // 총 넣음 (아래로)
+  else if(b > -15) setDown(false); // 총 뽑음 (들어올림)
+}
+async function sensorsInit(){
+  try{
+    if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function'){
+      await DeviceOrientationEvent.requestPermission(); // iOS: 버튼 탭 안에서 호출해야 함
+    }
+  }catch(e){}
+  window.addEventListener('deviceorientation', onOri);
+  setTimeout(() => { if(sensor !== 'tilt'){ sensor = 'touch'; render(); } }, 1500);
+}
+const pad = $('pad');
+pad.addEventListener('pointerdown', e => { if(sensor==='touch'){ pad.setPointerCapture(e.pointerId); setDown(true); } });
+['pointerup','pointercancel'].forEach(t => pad.addEventListener(t, () => { if(sensor==='touch') setDown(false); }));
+
+let wakeLock = null;
+async function keepAwake(){ try{ wakeLock = await navigator.wakeLock.request('screen'); }catch(e){} }
+document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible' && S.mode) keepAwake(); });
+
+// ---------- 판정 ----------
+// 낮을수록 좋음. 반응시간(ms) < 상대 부정출발로 이김(5e8) < 시간초과(8e8) < 부정출발(1e9)
+function val(r){ if(!r) return Infinity; if(r.foul) return 1e9; if(r.miss) return 8e8; if(r.skip) return 5e8; return r.ms; }
+function judge(me, opp){
+  const a = val(me), b = val(opp);
+  if(a === b || (a >= 8e8 && b >= 8e8)) return 0;
+  return a < b ? 1 : -1;
+}
+const fmt = r => r.foul ? (r.fake ? r.fake + '에 속음' : '부정출발') : r.miss ? '시간초과' : r.skip ? '—' : (r.ms/1000).toFixed(3) + '초';
+
+// ---------- 흐름 ----------
+function setDown(v){
+  if(v === S.holster) return;
+  S.holster = v;
+  send({t:'h', v});
+  if(S.phase === 'ready' || S.phase === 'result') checkReady();
+  else if(S.phase === 'wait' && !v) myResult({foul:true});
+  else if(S.phase === 'fire' && !v) myResult({ms: Math.max(1, performance.now() - S.t0)});
+  render();
+}
+
+function checkReady(){
+  clearTimeout(readyTimer);
+  if(S.phase !== 'ready') return;
+  const both = S.holster && (S.mode === 'solo' || S.oppHolster);
+  if(!both || S.mode === 'guest') return; // 시작 신호는 방장 폰이 보냄
+  readyTimer = setTimeout(() => {
+    if(S.phase !== 'ready' || !S.holster || (S.mode !== 'solo' && !S.oppHolster)) return;
+    const n = Math.floor(Math.random() * 6); // 페이크 0~5개
+    const round = S.round + 1, delay = 2500 + n * 1000 + Math.floor(Math.random() * 3500);
+    const fakes = makeFakes(delay, n);
+    send({t:'go', round, delay, fakes});
+    startRound(round, delay, fakes);
+  }, 900);
+}
+// n개의 페이크를 1.2초 이후 ~ FIRE 0.9초 전 사이에 무작위로 배치 (서로 0.9초 이상 간격)
+function makeFakes(delay, n){
+  const free = Math.max(0, delay - 900 - 1200 - (n - 1) * 900);
+  const offs = Array.from({length:n}, () => Math.floor(Math.random() * free)).sort((a, b) => a - b);
+  let last = '';
+  return offs.map((o, i) => {
+    let word;
+    do { word = FAKES[Math.floor(Math.random() * FAKES.length)]; } while(word === last);
+    last = word;
+    return {at: 1200 + o + i * 900, word};
+  });
+}
+
+function startRound(round, delay, fakes){
+  clearTimeout(nextTimer);
+  S.round = round; S.phase = 'wait'; S.fake = null;
+  S.res = {me:null, opp: S.pend[round] || null};
+  delete S.pend[round];
+  heartbeat();
+  fireTimer = setTimeout(fire, delay);
+  fakeTimers = (fakes || []).map(f => setTimeout(() => showFake(f.word), f.at));
+  render();
+  if(!S.holster) myResult({foul:true});
+  else if(S.res.opp && S.res.opp.foul) myResult({skip:true});
+}
+function showFake(word){
+  if(S.phase !== 'wait') return;
+  S.fake = word; say(word); render();
+  setTimeout(() => { if(S.fake === word){ S.fake = null; render(); } }, 700);
+}
+function heartbeat(){
+  clearTimeout(beatTimer);
+  if(S.phase !== 'wait') return;
+  tone(70, .12, 'sine', .35);
+  beatTimer = setTimeout(heartbeat, 650);
+}
+function fire(){
+  if(S.phase !== 'wait') return;
+  clearTimeout(beatTimer);
+  S.phase = 'fire'; S.fake = null;
+  render();
+  requestAnimationFrame(() => { S.t0 = performance.now(); });
+  say('Fire!');
+  missTimer = setTimeout(() => myResult({miss:true}), 2500);
+}
+function myResult(r){
+  if(S.res.me) return;
+  if(r.foul && S.fake) r.fake = S.fake;
+  clearTimeout(fireTimer); clearTimeout(missTimer); clearTimeout(beatTimer); fakeTimers.forEach(clearTimeout);
+  S.fake = null;
+  S.res.me = r;
+  if(r.ms) bang();
+  if(r.foul) tone(140, .5, 'sawtooth', .25);
+  S.phase = 'after';
+  send({t:'r', round:S.round, r});
+  resolve();
+}
+function onOppResult(round, r){
+  if(round !== S.round || S.phase === 'ready'){ S.pend[round] = r; return; }
+  S.res.opp = r;
+  if(r.foul && !S.res.me) myResult({skip:true}); // 상대가 먼저 부정출발하면 즉시 내 승
+  else resolve();
+}
+function resolve(){
+  const {me, opp} = S.res;
+  if(S.mode === 'solo'){
+    if(!me) return;
+    if(me.ms && (!S.best || me.ms < S.best)){ S.best = Math.round(me.ms); store.set('qd-best', S.best); }
+    S.phase = 'result'; render(); return;
+  }
+  if(!me || !opp) { render(); return; }
+  const w = judge(me, opp);
+  if(w > 0) S.score[0]++; else if(w < 0) S.score[1]++;
+  S.lastWin = w;
+  S.phase = S.score[0] >= WIN || S.score[1] >= WIN ? 'match' : 'result';
+  if(S.phase === 'result') nextTimer = setTimeout(() => { if(S.phase==='result'){ S.phase = 'ready'; checkReady(); render(); } }, 2200);
+  render();
+}
+function resetMatch(){
+  S.score = [0,0]; S.round = 0; S.pend = {}; S.res = {me:null, opp:null};
+  S.phase = 'ready'; checkReady(); render();
+}
+
+// ---------- 연결 (PeerJS) ----------
+function send(m){ if(conn && conn.open) try{ conn.send(m); }catch(e){} }
+function onMsg(m){
+  if(!m || typeof m !== 'object') return;
+  switch(m.t){
+    case 'hi': S.oppName = String(m.name || '상대').slice(0,10); if(typeof m.stake==='string' && !S.stake){ S.stake = m.stake.slice(0,30); } render(); break;
+    case 'h': S.oppHolster = !!m.v; checkReady(); render(); break;
+    case 'go': {
+      if(S.mode !== 'guest' || !Number.isFinite(m.round) || !Number.isFinite(m.delay)) break;
+      const delay = Math.min(13000, Math.max(500, m.delay));
+      const fakes = Array.isArray(m.fakes) ? m.fakes.slice(0,5)
+        .filter(f => f && Number.isFinite(f.at) && f.at < delay && FAKES.includes(f.word)) : [];
+      startRound(m.round, delay, fakes);
+      break;
+    }
+    case 'r': if(m.r && typeof m.r === 'object') onOppResult(m.round, m.r); break;
+    case 'stake': S.stake = String(m.v || '').slice(0,30); render(); break;
+    case 'again': resetMatch(); break;
+  }
+}
+function attach(c){
+  c.on('open', () => {
+    conn = c;
+    send({t:'hi', name:S.name, stake:S.stake});
+    send({t:'h', v:S.holster});
+    show('game'); S.phase = 'ready'; render();
+  });
+  c.on('data', onMsg);
+  c.on('close', lost);
+  c.on('error', lost);
+}
+function lost(){
+  if(!S.mode || S.mode === 'solo') return;
+  conn = null; clearAll();
+  S.phase = 'lost'; render();
+}
+function newCode(){ return String(1000 + Math.floor(Math.random()*9000)); }
+
+function host(){
+  if(!window.Peer){ $('lobbyMsg').textContent = '연결 모듈을 불러오지 못했어요. 인터넷 연결을 확인하세요.'; return; }
+  S.mode = 'host';
+  const code = newCode();
+  $('roomCode').textContent = code; $('roomMsg').textContent = '서버 연결 중…';
+  show('room');
+  peer = new Peer(PREFIX + code);
+  peer.on('open', () => { $('roomMsg').textContent = '상대가 들어오길 기다리는 중'; });
+  peer.on('connection', c => { if(conn){ c.close(); return; } attach(c); });
+  peer.on('error', e => {
+    if(e.type === 'unavailable-id'){ peer.destroy(); S.mode=null; host(); }
+    else $('roomMsg').textContent = '연결 오류: ' + e.type + ' (다시 시도해 주세요)';
+  });
+}
+function join(){
+  const code = $('joinCode').value.trim();
+  if(!/^\d{4}$/.test(code)){ $('lobbyMsg').textContent = '방 번호 4자리를 입력하세요.'; return; }
+  if(!window.Peer){ $('lobbyMsg').textContent = '연결 모듈을 불러오지 못했어요. 인터넷 연결을 확인하세요.'; return; }
+  S.mode = 'guest';
+  $('lobbyMsg').textContent = '입장 중…';
+  peer = new Peer();
+  peer.on('open', () => attach(peer.connect(PREFIX + code, {reliable:true})));
+  peer.on('error', e => {
+    $('lobbyMsg').textContent = e.type === 'peer-unavailable' ? '그 번호의 방이 없어요. 번호를 확인하세요.' : '연결 오류: ' + e.type;
+    S.mode = null;
+  });
+}
+function clearAll(){ [fireTimer, missTimer, readyTimer, nextTimer, beatTimer, ...fakeTimers].forEach(clearTimeout); S.fake = null; }
+function quit(){
+  clearAll();
+  try{ conn && conn.close(); }catch(e){} try{ peer && peer.destroy(); }catch(e){}
+  conn = peer = null;
+  Object.assign(S, {mode:null, phase:'lobby', round:0, score:[0,0], res:{me:null,opp:null}, pend:{}, oppHolster:false, oppName:'상대'});
+  document.body.className = '';
+  show('lobby');
+}
+
+// ---------- 화면 ----------
+function show(id){ ['lobby','room','game'].forEach(s => $(s).hidden = s !== id); }
+function render(){
+  const solo = S.mode === 'solo';
+  $('meName').textContent = S.name || '나';
+  $('oppName').textContent = S.oppName;
+  $('oppBox').style.visibility = solo ? 'hidden' : 'visible';
+  $('stakeRow').hidden = solo;
+  if(document.activeElement !== $('stake')) $('stake').value = S.stake;
+  $('score').innerHTML = solo ? (S.best ? (S.best/1000).toFixed(3) : '-.---') + '<small>최고</small>' : S.score[0] + '<small>:</small>' + S.score[1];
+  setPill($('meH'), S.holster); setPill($('oppH'), S.oppHolster);
+  $('pad').hidden = sensor !== 'touch';
+  $('pad').classList.toggle('on', S.holster);
+  $('phoneIcon').classList.toggle('down', S.holster);
+  $('bAgain').hidden = !(S.phase === 'match' || (solo && S.phase === 'result') || S.phase === 'lost');
+  $('bAgain').textContent = S.phase === 'lost' ? '처음으로' : '다시 한 판';
+
+  let cue = '', sub = '', det = '', cls = '';
+  const me = S.res.me, opp = S.res.opp;
+  switch(S.phase){
+    case 'ready':
+      cue = S.holster ? '좋아' : '총 넣어';
+      sub = !S.holster ? '휴대폰을 거꾸로 들어 아래로 내리세요'
+          : solo || S.oppHolster ? '곧 시작합니다. 움직이지 마세요'
+          : S.oppName + '님이 총을 넣길 기다리는 중';
+      if(S.mode !== 'solo' && S.round === 0) det = '먼저 ' + WIN + '판 이기면 승리';
+      break;
+    case 'wait':
+      if(S.fake){ cue = S.fake + '!'; cls = 'fire'; }
+      else { cue = '기다려…'; sub = 'FIRE! 라고 할 때만 쏘세요'; }
+      break;
+    case 'fire': cue = 'FIRE!'; cls = 'fire'; break;
+    case 'after':
+      cue = me && me.foul ? (me.fake ? '속았지!' : '부정출발!') : me && me.ms ? '탕!' : '…';
+      if(me && me.foul) cls = 'foul';
+      sub = me && me.ms ? fmt(me) : me && me.fake ? me.fake + '에 쐈어요' : '';
+      det = S.oppName + '님 결과 기다리는 중';
+      break;
+    case 'result':
+      if(solo){
+        cue = me.foul ? (me.fake ? '속았지!' : '부정출발!') : me.miss ? '너무 늦어요' : fmt(me);
+        if(me.foul) cls = 'foul';
+        sub = me.ms ? (me.ms < 250 ? '번개 같은 손' : me.ms < 350 ? '쓸 만한 총잡이' : '좀 더 빨리!') : me.fake ? me.fake + '에 쐈어요' : '';
+        det = '휴대폰을 다시 내리면 한 번 더';
+      } else {
+        cue = S.lastWin > 0 ? '이겼다' : S.lastWin < 0 ? '졌다' : '무승부';
+        sub = '나 ' + fmt(me) + ' · ' + S.oppName + ' ' + fmt(opp);
+        det = '다음 판 준비';
+      }
+      break;
+    case 'match': {
+      const iWon = S.score[0] > S.score[1];
+      cue = iWon ? '승리!' : '패배…';
+      sub = S.stake ? (iWon ? S.oppName + '님 벌칙: ' : '내 벌칙: ') + S.stake : (iWon ? '최고의 총잡이' : '다음엔 꼭');
+      det = '최종 ' + S.score[0] + ' : ' + S.score[1];
+      break;
+    }
+    case 'lost': cue = '연결 끊김'; sub = '상대와 연결이 끊겼어요'; break;
+  }
+  $('cue').textContent = cue; $('sub').textContent = sub; $('detail').textContent = det;
+  document.body.className = cls;
+}
+function setPill(el, on){ el.classList.toggle('on', on); el.textContent = on ? '총 넣음' : '총 꺼냄'; }
+
+// 혼자 연습: 결과 후 다시 내리면 재시작
+const _check = checkReady;
+checkReady = function(){
+  if(S.mode === 'solo' && S.phase === 'result') S.phase = 'ready';
+  _check();
+};
+
+// ---------- 버튼 ----------
+$('name').value = store.get('qd-name', '');
+function begin(){
+  S.name = ($('name').value.trim() || '나').slice(0,10);
+  store.set('qd-name', S.name);
+  audioInit(); sensorsInit(); keepAwake();
+  say(' ', 0); // 아이폰: 버튼 탭 때 음성을 한 번 깨워둬야 나중에 말함
+}
+$('bHost').onclick = () => { begin(); host(); };
+$('bJoin').onclick = () => { begin(); join(); };
+$('bSolo').onclick = () => { begin(); S.mode = 'solo'; S.phase = 'ready'; show('game'); render(); checkReady(); };
+$('bCancel').onclick = quit;
+$('bQuit').onclick = quit;
+$('bAgain').onclick = () => {
+  if(S.phase === 'lost'){ quit(); return; }
+  if(S.mode === 'solo'){ S.phase = 'ready'; render(); checkReady(); return; }
+  send({t:'again'}); resetMatch();
+};
+$('stake').addEventListener('input', e => { S.stake = e.target.value.slice(0,30); send({t:'stake', v:S.stake}); });
+$('joinCode').addEventListener('keydown', e => { if(e.key === 'Enter') $('bJoin').click(); });
+</script>
+</body>
+</html>
